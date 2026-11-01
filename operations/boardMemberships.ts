@@ -117,7 +117,7 @@ export async function createBoardMembership(
 ) {
     try {
         const response = await plankaRequest(
-            `/api/boards/${options.boardId}/memberships`,
+            `/api/boards/${options.boardId}/board-memberships`,
             {
                 method: "POST",
                 body: {
