@@ -6,6 +6,7 @@ import { getLabels } from "../operations/labels.js";
 import { getProjects } from "../operations/projects.js";
 import { getBoards } from "../operations/boards.js";
 import { getLists } from "../operations/lists.js";
+import { plankaRequest } from "../common/utils.js";
 
 /**
  * Zod schema for the getCardDetails function parameters
@@ -84,12 +85,18 @@ export async function getCardDetails(params: GetCardDetailsParams) {
             throw new Error(`Could not determine board ID for card ${cardId}`);
         }
 
-        const labels = await getLabels(boardId);
+        const boardLabels = await getLabels(boardId);
 
-        // Filter to just the labels assigned to this card
-        // Note: We need to get the labelIds from the card's data
-        // This might require additional API calls or data structure knowledge
-        // For now, we'll return all labels for the board
+        // Keep only the labels assigned to this card (card response lists them in included.cardLabels)
+        const cardResponse: any = await plankaRequest(`/api/cards/${card.id}`);
+        const assignedLabelIds = new Set(
+            (cardResponse?.included?.cardLabels ?? []).map((cl: any) =>
+                cl.labelId
+            ),
+        );
+        const labels = boardLabels.filter((label: any) =>
+            assignedLabelIds.has(label.id)
+        );
 
         // Calculate task completion percentage
         const completedTasks = tasks.filter((task: any) =>
