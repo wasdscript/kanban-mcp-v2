@@ -116,13 +116,18 @@ export async function createTask(params: {
     cardId: string;
     name: string;
     position?: number;
+    taskListId?: string;
 }) {
     try {
         const { cardId, name, position = 65535 } = params;
 
-        // Planka v2: tasks live in task lists, so find (or create) the card's task list first
-        const card: any = await plankaRequest(`/api/cards/${cardId}`);
-        let taskListId: string | undefined = card?.included?.taskLists?.[0]?.id;
+        // Planka v2: tasks live in task lists. Use the given one, otherwise the
+        // card's first task list, otherwise create one.
+        let taskListId: string | undefined = params.taskListId;
+        if (!taskListId) {
+            const card: any = await plankaRequest(`/api/cards/${cardId}`);
+            taskListId = card?.included?.taskLists?.[0]?.id;
+        }
         if (!taskListId) {
             const created: any = await plankaRequest(
                 `/api/cards/${cardId}/task-lists`,

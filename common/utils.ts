@@ -88,7 +88,7 @@ async function authenticateAgent(): Promise<string> {
   }
 }
 
-async function getAuthToken(): Promise<string> {
+export async function getAuthToken(): Promise<string> {
   if (agentToken) {
     return agentToken;
   }

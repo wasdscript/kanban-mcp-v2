@@ -20,6 +20,9 @@ export const CreateListSchema = z.object({
     boardId: z.string().describe("Board ID"),
     name: z.string().describe("List name"),
     position: z.number().optional().describe("List position (default: 65535)"),
+    type: z.enum(["active", "closed"]).optional().describe(
+        "List type (default: active)",
+    ),
 });
 
 /**
@@ -90,7 +93,7 @@ export async function createList(options: CreateListOptions) {
             {
                 method: "POST",
                 body: {
-                    type: "active",
+                    type: options.type ?? "active",
                     name: options.name,
                     position: options.position,
                 },
@@ -189,4 +192,79 @@ export async function deleteList(id: string) {
         method: "DELETE",
     });
     return { success: true };
+}
+
+/**
+ * Sorts the cards of a list
+ *
+ * @param {string} id - The ID of the list
+ * @param {"name" | "dueDate" | "createdAt"} fieldName - The field to sort by
+ * @param {"asc" | "desc"} [order] - The sort direction
+ * @returns {Promise<object>} The list and its cards in the new order
+ */
+export async function sortList(
+    id: string,
+    fieldName: "name" | "dueDate" | "createdAt",
+    order?: "asc" | "desc",
+) {
+    try {
+        const response: any = await plankaRequest(`/api/lists/${id}/sort`, {
+            method: "POST",
+            body: { fieldName, order },
+        });
+        return { list: response.item, cards: response.included?.cards ?? [] };
+    } catch (error) {
+        throw new Error(
+            `Failed to sort list: ${
+                error instanceof Error ? error.message : String(error)
+            }`,
+        );
+    }
+}
+
+/**
+ * Deletes all cards from a trash list
+ *
+ * @param {string} id - The ID of the trash list
+ * @returns {Promise<object>} The cleared list
+ */
+export async function clearList(id: string) {
+    try {
+        const response: any = await plankaRequest(`/api/lists/${id}/clear`, {
+            method: "POST",
+        });
+        return response.item;
+    } catch (error) {
+        throw new Error(
+            `Failed to clear list: ${
+                error instanceof Error ? error.message : String(error)
+            }`,
+        );
+    }
+}
+
+/**
+ * Moves all cards from a closed list into an archive list
+ *
+ * @param {string} id - The ID of the closed list
+ * @param {string} targetListId - The ID of the archive list
+ * @returns {Promise<object>} The source list and the moved cards
+ */
+export async function moveListCards(id: string, targetListId: string) {
+    try {
+        const response: any = await plankaRequest(
+            `/api/lists/${id}/move-cards`,
+            {
+                method: "POST",
+                body: { listId: targetListId },
+            },
+        );
+        return { list: response.item, cards: response.included?.cards ?? [] };
+    } catch (error) {
+        throw new Error(
+            `Failed to move cards: ${
+                error instanceof Error ? error.message : String(error)
+            }`,
+        );
+    }
 }

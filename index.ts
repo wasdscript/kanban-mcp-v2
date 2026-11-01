@@ -4,6 +4,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 // Import Planka operations
+import * as attachments from "./operations/attachments.js";
+import * as cardMemberships from "./operations/cardMemberships.js";
+import * as taskLists from "./operations/taskLists.js";
 import * as boardMemberships from "./operations/boardMemberships.js";
 import * as boards from "./operations/boards.js";
 import * as cards from "./operations/cards.js";
@@ -166,12 +169,39 @@ server.tool(
   "Manage kanban lists with various operations",
   {
     action: z
-      .enum(["get_all", "create", "update", "delete", "get_one"])
-      .describe("The action to perform"),
+      .enum([
+        "get_all",
+        "create",
+        "update",
+        "delete",
+        "get_one",
+        "sort",
+        "clear",
+        "move_cards",
+      ])
+      .describe(
+        "sort: sort the cards of a list; clear: delete all cards of a trash list; move_cards: move all cards of a closed list into an archive list"
+      ),
     id: z.string().optional().describe("The ID of the list"),
     boardId: z.string().optional().describe("The ID of the board"),
     name: z.string().optional().describe("The name of the list"),
     position: z.number().optional().describe("The position of the list"),
+    type: z
+      .enum(["active", "closed"])
+      .optional()
+      .describe("The type of the list for create (default: active)"),
+    fieldName: z
+      .enum(["name", "dueDate", "createdAt"])
+      .optional()
+      .describe("The field to sort the cards by (sort action)"),
+    order: z
+      .enum(["asc", "desc"])
+      .optional()
+      .describe("The sort direction (sort action)"),
+    targetListId: z
+      .string()
+      .optional()
+      .describe("The ID of the archive list (move_cards action)"),
   },
   async (args) => {
     let result;
@@ -192,6 +222,7 @@ server.tool(
           boardId: args.boardId,
           name: args.name,
           position: args.position,
+          type: args.type,
         });
         break;
 
@@ -215,6 +246,25 @@ server.tool(
       case "delete":
         if (!args.id) throw new Error("id is required for delete action");
         result = await lists.deleteList(args.id);
+        break;
+
+      case "sort":
+        if (!args.id || !args.fieldName)
+          throw new Error("id and fieldName are required for sort action");
+        result = await lists.sortList(args.id, args.fieldName, args.order);
+        break;
+
+      case "clear":
+        if (!args.id) throw new Error("id is required for clear action");
+        result = await lists.clearList(args.id);
+        break;
+
+      case "move_cards":
+        if (!args.id || !args.targetListId)
+          throw new Error(
+            "id and targetListId are required for move_cards action"
+          );
+        result = await lists.moveListCards(args.id, args.targetListId);
         break;
 
       default:
@@ -571,6 +621,12 @@ server.tool(
       .describe("The action to perform"),
     id: z.string().optional().describe("The ID of the task"),
     cardId: z.string().optional().describe("The ID of the card"),
+    taskListId: z
+      .string()
+      .optional()
+      .describe(
+        "The ID of the task list to create the task in (default: the first task list of the card)"
+      ),
     name: z.string().optional().describe("The name of the task"),
     isCompleted: z
       .boolean()
@@ -605,6 +661,7 @@ server.tool(
           cardId: args.cardId,
           name: args.name,
           position: args.position,
+          taskListId: args.taskListId,
         });
         break;
 
@@ -616,7 +673,7 @@ server.tool(
 
       case "get_one":
         if (!args.id) throw new Error("id is required for get_one action");
-        result = await tasks.getTask(args.id);
+        result = await tasks.getTask(args.id, args.cardId);
         break;
 
       case "update":
@@ -776,6 +833,227 @@ server.tool(
       case "delete":
         if (!args.id) throw new Error("id is required for delete action");
         result = await boardMemberships.deleteBoardMembership(args.id);
+        break;
+
+      default:
+        throw new Error(`Unknown action: ${args.action}`);
+    }
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(result) }],
+    };
+  }
+);
+
+// 9. Card Membership Manager (card assignees)
+server.tool(
+  "mcp_kanban_card_membership_manager",
+  "Assign board members to cards and see who is assigned",
+  {
+    action: z
+      .enum(["get_all", "add", "remove", "get_board_users"])
+      .describe(
+        "get_all: users assigned to a card; add/remove: assign or unassign a user; get_board_users: users of a board that can be assigned"
+      ),
+    cardId: z.string().optional().describe("The ID of the card"),
+    boardId: z.string().optional().describe("The ID of the board"),
+    userId: z.string().optional().describe("The ID of the user"),
+  },
+  async (args) => {
+    let result;
+
+    switch (args.action) {
+      case "get_all":
+        if (!args.cardId)
+          throw new Error("cardId is required for get_all action");
+        result = await cardMemberships.getCardMemberships(args.cardId);
+        break;
+
+      case "add":
+        if (!args.cardId || !args.userId)
+          throw new Error("cardId and userId are required for add action");
+        result = await cardMemberships.addCardMember(args.cardId, args.userId);
+        break;
+
+      case "remove":
+        if (!args.cardId || !args.userId)
+          throw new Error("cardId and userId are required for remove action");
+        result = await cardMemberships.removeCardMember(
+          args.cardId,
+          args.userId
+        );
+        break;
+
+      case "get_board_users":
+        if (!args.boardId)
+          throw new Error("boardId is required for get_board_users action");
+        result = await cardMemberships.getBoardUsers(args.boardId);
+        break;
+
+      default:
+        throw new Error(`Unknown action: ${args.action}`);
+    }
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(result) }],
+    };
+  }
+);
+
+// 10. Task List Manager
+server.tool(
+  "mcp_kanban_task_list_manager",
+  "Manage task lists of a card (a card can have several; tasks live in them)",
+  {
+    action: z
+      .enum(["get_all", "get_one", "create", "update", "delete"])
+      .describe("The action to perform"),
+    id: z.string().optional().describe("The ID of the task list"),
+    cardId: z.string().optional().describe("The ID of the card"),
+    name: z.string().optional().describe("The name of the task list"),
+    position: z.number().optional().describe("The position of the task list"),
+    showOnFrontOfCard: z
+      .boolean()
+      .optional()
+      .describe("Show the task list on the front of the card"),
+    hideCompletedTasks: z
+      .boolean()
+      .optional()
+      .describe("Hide completed tasks of the task list"),
+  },
+  async (args) => {
+    let result;
+
+    switch (args.action) {
+      case "get_all":
+        if (!args.cardId)
+          throw new Error("cardId is required for get_all action");
+        result = await taskLists.getTaskLists(args.cardId);
+        break;
+
+      case "get_one":
+        if (!args.id) throw new Error("id is required for get_one action");
+        result = await taskLists.getTaskList(args.id);
+        break;
+
+      case "create":
+        if (!args.cardId || !args.name)
+          throw new Error("cardId and name are required for create action");
+        result = await taskLists.createTaskList(args.cardId, {
+          name: args.name,
+          position: args.position ?? 65535,
+          showOnFrontOfCard: args.showOnFrontOfCard,
+          hideCompletedTasks: args.hideCompletedTasks,
+        });
+        break;
+
+      case "update":
+        if (!args.id) throw new Error("id is required for update action");
+        result = await taskLists.updateTaskList(args.id, {
+          name: args.name,
+          position: args.position,
+          showOnFrontOfCard: args.showOnFrontOfCard,
+          hideCompletedTasks: args.hideCompletedTasks,
+        });
+        break;
+
+      case "delete":
+        if (!args.id) throw new Error("id is required for delete action");
+        result = await taskLists.deleteTaskList(args.id);
+        break;
+
+      default:
+        throw new Error(`Unknown action: ${args.action}`);
+    }
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(result) }],
+    };
+  }
+);
+
+// 11. Attachment Manager
+server.tool(
+  "mcp_kanban_attachment_manager",
+  "Manage card attachments (links and files). Files are uploaded from and downloaded to one folder only: PLANKA_ATTACHMENTS_DIR (default ~/kanban-mcp-attachments)",
+  {
+    action: z
+      .enum([
+        "get_all",
+        "add_link",
+        "upload",
+        "update",
+        "delete",
+        "download",
+        "get_folder",
+      ])
+      .describe("The action to perform"),
+    id: z.string().optional().describe("The ID of the attachment"),
+    cardId: z.string().optional().describe("The ID of the card"),
+    name: z.string().optional().describe("The name of the attachment"),
+    url: z.string().optional().describe("The URL for add_link"),
+    filePath: z
+      .string()
+      .optional()
+      .describe(
+        "upload: file inside the attachments folder; download: where to save inside it"
+      ),
+  },
+  async (args) => {
+    let result;
+
+    switch (args.action) {
+      case "get_all":
+        if (!args.cardId)
+          throw new Error("cardId is required for get_all action");
+        result = await attachments.getAttachments(args.cardId);
+        break;
+
+      case "add_link":
+        if (!args.cardId || !args.name || !args.url)
+          throw new Error(
+            "cardId, name, and url are required for add_link action"
+          );
+        result = await attachments.addLinkAttachment(
+          args.cardId,
+          args.name,
+          args.url
+        );
+        break;
+
+      case "upload":
+        if (!args.cardId || !args.filePath)
+          throw new Error("cardId and filePath are required for upload action");
+        result = await attachments.uploadAttachment(
+          args.cardId,
+          args.filePath,
+          args.name
+        );
+        break;
+
+      case "update":
+        if (!args.id || !args.name)
+          throw new Error("id and name are required for update action");
+        result = await attachments.updateAttachment(args.id, args.name);
+        break;
+
+      case "delete":
+        if (!args.id) throw new Error("id is required for delete action");
+        result = await attachments.deleteAttachment(args.id);
+        break;
+
+      case "download":
+        if (!args.cardId || !args.id)
+          throw new Error("cardId and id are required for download action");
+        result = await attachments.downloadAttachment(
+          args.cardId,
+          args.id,
+          args.filePath
+        );
+        break;
+
+      case "get_folder":
+        result = { folder: attachments.getAttachmentsDir() };
         break;
 
       default:

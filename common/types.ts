@@ -32,7 +32,7 @@ export const PlankaListSchema = z.object({
   id: z.string(),
   boardId: z.string(),
   name: z.string().nullish(),
-  position: z.number(),
+  position: z.number().nullish(),
   createdAt: z.string(),
   updatedAt: z.string().nullable(),
 });
@@ -57,7 +57,7 @@ export const PlankaCardSchema = z.object({
   listId: z.string(),
   name: z.string(),
   description: z.string().nullable(),
-  position: z.number(),
+  position: z.number().nullish(),
   dueDate: z.string().nullable(),
   isCompleted: z.boolean().optional(),
   stopwatch: PlankaStopwatchSchema.nullable().optional(),
