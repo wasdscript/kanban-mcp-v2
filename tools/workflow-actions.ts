@@ -96,7 +96,7 @@ export async function performWorkflowAction(params: WorkflowActionParams) {
         switch (action) {
             case "start_working":
                 targetList = boardLists.find((list: any) =>
-                    list.name.toLowerCase() === "in progress"
+                    list.name?.toLowerCase() === "in progress"
                 );
                 actionComment = comment || "🚀 Started working on this card.";
                 break;
@@ -142,8 +142,8 @@ export async function performWorkflowAction(params: WorkflowActionParams) {
 
             case "move_to_testing":
                 targetList = boardLists.find((list: any) =>
-                    list.name.toLowerCase() === "testing" ||
-                    list.name.toLowerCase() === "review"
+                    list.name?.toLowerCase() === "testing" ||
+                    list.name?.toLowerCase() === "review"
                 );
                 actionComment = comment ||
                     "✅ Implementation completed and ready for testing.";
@@ -151,7 +151,7 @@ export async function performWorkflowAction(params: WorkflowActionParams) {
 
             case "move_to_done":
                 targetList = boardLists.find((list: any) =>
-                    list.name.toLowerCase() === "done"
+                    list.name?.toLowerCase() === "done"
                 );
                 actionComment = comment ||
                     "🎉 All work completed and verified.";
