@@ -1,11 +1,11 @@
 {
   "name": "mcp-kanban",
-  "version": "0.0.6",
+  "version": "0.2.0",
   "description": "MCP server for kanban board",
   "license": "MIT",
   "author": "Brad Risse",
-  "homepage": "https://github.com/bradrisse/mcp-kanban",
-  "bugs": "https://github.com/bradrisse/mcp-kanban/issues",
+  "homepage": "https://github.com/wasdscript/kanban-mcp-v2",
+  "bugs": "https://github.com/wasdscript/kanban-mcp-v2/issues",
   "type": "module",
   "bin": {
     "mcp-server-kanban": "dist/index.js"

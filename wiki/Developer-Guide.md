@@ -45,7 +45,7 @@ kanban-mcp/
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/bradrisse/kanban-mcp.git
+   git clone https://github.com/wasdscript/kanban-mcp-v2.git kanban-mcp
    cd kanban-mcp
    ```
 

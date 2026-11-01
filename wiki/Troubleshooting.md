@@ -242,7 +242,7 @@ This indicates permission issues.
 If you're still experiencing issues after trying these troubleshooting steps:
 
 1. **🔍 Check GitHub Issues:**
-   - Visit the [Kanban MCP GitHub repository](https://github.com/bradrisse/kanban-mcp/issues)
+   - Visit the [Kanban MCP GitHub repository](https://github.com/wasdscript/kanban-mcp-v2/issues)
    - Search for similar issues or create a new one
 
 2. **📊 Gather Diagnostic Information:**

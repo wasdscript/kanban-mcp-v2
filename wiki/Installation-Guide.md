@@ -22,7 +22,7 @@ There are two main ways to set up Kanban MCP:
 #### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/bradrisse/kanban-mcp.git
+git clone https://github.com/wasdscript/kanban-mcp-v2.git kanban-mcp
 cd kanban-mcp
 ```
 
@@ -95,7 +95,7 @@ If you prefer to run the MCP server in Docker, follow these steps:
 #### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/bradrisse/kanban-mcp.git
+git clone https://github.com/wasdscript/kanban-mcp-v2.git kanban-mcp
 cd kanban-mcp
 ```
 
