@@ -162,9 +162,19 @@ export async function getBoardMemberships(boardId: string) {
  */
 export async function getBoardMembership(id: string) {
     try {
-        const response = await plankaRequest(`/api/board-memberships/${id}`);
-        const parsedResponse = BoardMembershipResponseSchema.parse(response);
-        return parsedResponse.item;
+        // Planka v2 has no GET /api/board-memberships/{id}: look the membership up
+        // in the memberships of every board the user can see.
+        const projects: any = await plankaRequest(`/api/projects`);
+        const boardIds: string[] = (projects?.included?.boards ?? []).map((
+            board: any,
+        ) => board.id);
+        for (const boardId of boardIds) {
+            const found = (await getBoardMemberships(boardId)).find((
+                membership,
+            ) => membership.id === id);
+            if (found) return found;
+        }
+        throw new Error(`Board membership not found: ${id}`);
     } catch (error) {
         throw new Error(
             `Failed to get board membership: ${

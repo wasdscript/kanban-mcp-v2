@@ -143,7 +143,8 @@ export async function createCard(options: CreateCardOptions) {
                 body: {
                     type: "project",
                     name: options.name,
-                    description: options.description,
+                    // Planka v2 rejects an empty description
+                    description: options.description || undefined,
                     position: options.position,
                 },
             },
