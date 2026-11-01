@@ -67,14 +67,15 @@ export type UpdateCommentOptions = z.infer<typeof UpdateCommentSchema>;
 // Comment action schema
 const CommentActionSchema = z.object({
     id: z.string(),
-    type: z.literal("commentCard"),
+    type: z.literal("commentCard").optional(),
     data: z.object({
         text: z.string(),
-    }),
+    }).optional(),
+    text: z.string().optional(),
     cardId: z.string(),
     userId: z.string(),
     createdAt: z.string(),
-    updatedAt: z.string().nullable(),
+    updatedAt: z.string().nullish(),
 });
 
 // Response schemas
@@ -101,7 +102,7 @@ const CommentActionResponseSchema = z.object({
 export async function createComment(options: CreateCommentOptions) {
     try {
         const response = await plankaRequest(
-            `/api/cards/${options.cardId}/comment-actions`,
+            `/api/cards/${options.cardId}/comments`,
             {
                 method: "POST",
                 body: {
@@ -129,7 +130,7 @@ export async function createComment(options: CreateCommentOptions) {
  */
 export async function getComments(cardId: string) {
     try {
-        const response = await plankaRequest(`/api/cards/${cardId}/actions`);
+        const response = await plankaRequest(`/api/cards/${cardId}/comments`);
 
         try {
             // Try to parse as a CommentsResponseSchema first
@@ -137,7 +138,7 @@ export async function getComments(cardId: string) {
             // Filter only comment actions
             if (parsedResponse.items && Array.isArray(parsedResponse.items)) {
                 return parsedResponse.items.filter((item) =>
-                    item.type === "commentCard"
+                    item.type === undefined || item.type === "commentCard"
                 );
             }
             return parsedResponse.items;
@@ -146,7 +147,7 @@ export async function getComments(cardId: string) {
             if (Array.isArray(response)) {
                 const items = z.array(CommentActionSchema).parse(response);
                 // Filter only comment actions
-                return items.filter((item) => item.type === "commentCard");
+                return items.filter((item) => item.type === undefined || item.type === "commentCard");
             }
 
             // If we get here, we couldn't parse the response in any expected format
@@ -242,7 +243,7 @@ export async function getComment(id: string) {
 
                 // Get the card actions
                 const actionsResponse = await plankaRequest(
-                    `/api/cards/${cardId}/actions`,
+                    `/api/cards/${cardId}/comments`,
                 );
 
                 if (
@@ -296,7 +297,7 @@ export async function updateComment(
     options: Partial<Omit<CreateCommentOptions, "cardId">>,
 ) {
     try {
-        const response = await plankaRequest(`/api/comment-actions/${id}`, {
+        const response = await plankaRequest(`/api/comments/${id}`, {
             method: "PATCH",
             body: {
                 text: options.text,
@@ -322,7 +323,7 @@ export async function updateComment(
  */
 export async function deleteComment(id: string) {
     try {
-        await plankaRequest(`/api/comment-actions/${id}`, {
+        await plankaRequest(`/api/comments/${id}`, {
             method: "DELETE",
         });
         return { success: true };

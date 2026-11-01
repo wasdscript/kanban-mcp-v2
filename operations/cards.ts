@@ -141,6 +141,7 @@ export async function createCard(options: CreateCardOptions) {
             {
                 method: "POST",
                 body: {
+                    type: "project",
                     name: options.name,
                     description: options.description,
                     position: options.position,
