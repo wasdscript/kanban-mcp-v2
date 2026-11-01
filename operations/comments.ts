@@ -262,9 +262,7 @@ export async function getComment(id: string) {
                     typeof action === "object" &&
                     action !== null &&
                     "id" in action &&
-                    action.id === id &&
-                    "type" in action &&
-                    action.type === "commentCard"
+                    action.id === id
                 );
 
                 if (comment) {
