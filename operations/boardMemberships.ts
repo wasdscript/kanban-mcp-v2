@@ -85,9 +85,9 @@ const BoardMembershipSchema = z.object({
     boardId: z.string(),
     userId: z.string(),
     role: z.string(),
-    canComment: z.boolean().nullable(),
+    canComment: z.boolean().nullish(),
     createdAt: z.string(),
-    updatedAt: z.string().nullable(),
+    updatedAt: z.string().nullish(),
 });
 
 // Response schemas
@@ -145,34 +145,12 @@ export async function createBoardMembership(
  * @throws {Error} If retrieving board memberships fails
  */
 export async function getBoardMemberships(boardId: string) {
-    try {
-        const response = await plankaRequest(
-            `/api/boards/${boardId}/memberships`,
-        );
-
-        try {
-            // Try to parse as a BoardMembershipsResponseSchema first
-            const parsedResponse = BoardMembershipsResponseSchema.parse(
-                response,
-            );
-            return parsedResponse.items;
-        } catch (parseError) {
-            // If that fails, try to parse as an array directly
-            if (Array.isArray(response)) {
-                return z.array(BoardMembershipSchema).parse(response);
-            }
-
-            // If we get here, we couldn't parse the response in any expected format
-            throw new Error(
-                `Could not parse board memberships response: ${
-                    JSON.stringify(response)
-                }`,
-            );
-        }
-    } catch (error) {
-        // If all else fails, return an empty array
-        return [];
-    }
+    // Planka v2 has no GET /api/boards/{id}/memberships endpoint:
+    // memberships are returned inside the board response (included.boardMemberships).
+    const response = await plankaRequest(`/api/boards/${boardId}`);
+    const included = (response as any)?.included;
+    const items = included?.boardMemberships ?? [];
+    return z.array(BoardMembershipSchema).parse(items);
 }
 
 /**

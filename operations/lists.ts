@@ -90,6 +90,7 @@ export async function createList(options: CreateListOptions) {
             {
                 method: "POST",
                 body: {
+                    type: "active",
                     name: options.name,
                     position: options.position,
                 },

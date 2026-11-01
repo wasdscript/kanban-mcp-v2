@@ -31,7 +31,7 @@ export const PlankaBoardSchema = z.object({
 export const PlankaListSchema = z.object({
   id: z.string(),
   boardId: z.string(),
-  name: z.string(),
+  name: z.string().nullish(),
   position: z.number(),
   createdAt: z.string(),
   updatedAt: z.string().nullable(),
